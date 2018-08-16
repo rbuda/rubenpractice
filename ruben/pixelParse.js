@@ -12,8 +12,9 @@ function magic(queryString){
     var amountBadChars = "";
     var amtBadChars = "";
     var tagType = "";
-    var warnings = {};
-
+    var test = []
+    var warnings = {}
+    var errors = new Array;
     // returns 'img' not sure what this is for yet
     for(i = 0; i < pixelArray.length; i++){
         usingX = pixelArray[i].match(/(dcntx)|(amtx)|(itemx)|(qtyx)/gi);
@@ -28,12 +29,14 @@ function magic(queryString){
     if(pixelDict["AMOUNT"] !== undefined){
         amountBadChars = pixelDict["AMOUNT"].match(/[^0-9\.]/g);
             if(amountBadChars !== null){
-                warnings += '<br/>Warning: Illegal characters found in AMOUNT: ' + amountBadChars;
+                test.push({AMOUNT_BAD_CHARS: 'Warning: Illegal characters found in AMOUNT: ' + amountBadChars});
+                //warnings += '<br/>Warning: Illegal characters found in AMOUNT: ' + amountBadChars;
                 badSubtotal = true;
             }
 
             if( ! $.isNumeric(pixelDict["AMOUNT"])) {
-                warnings += '<br/>Warning: AMOUNT is not a numeric value: ' + pixelDict["AMOUNT"];
+                test.push({AMOUNT_NUM_VALUE: 'AMOUNT is not a numeric value: ' + pixelDict["AMOUNT"]});
+                //warnings += '<br/>Warning: AMOUNT is not a numeric value: ' + pixelDict["AMOUNT"]
                 badSubtotal = true;
             }
 
@@ -66,14 +69,17 @@ function magic(queryString){
         if("METHOD" in pixelDict){
             itemList = itemList + '<span class="params">METHOD</span>: ' + pixelDict["METHOD"]+'<br/>';
                 if(!pixelDict["METHOD"]){
-                    warnings += '<br/>Warning: METHOD value is not defined'
+                    //warnings += '<br/>Warning: METHOD value is not defined'
+                    test.push({methodError: "Method value is not defined"});
                 }
                 else if(pixelDict["METHOD"].toLowerCase() != 'img' && pixelDict["METHOD"].toLowerCase() != 's2s'){
-                    warnings += '<br/>Warning: METHOD value is not IMG or S2S'
+                    //warnings += '<br/>Warning: METHOD value is not IMG or S2S'
+                    test.push({methodError: 'METHOD value is not IMG or S2S'});
                 }
                 else if(pixelDict['METHOD'].toLowerCase()=='s2s'){
                     if(!(pixelDict["SIGNATURE"] && pixelDict["CJEVENT"])){
-                        warnings += '<br/>Warning: METHOD is S2S but CJEVENT and/or SIGNATURE parameters are missing'
+                        //warnings += '<br/>Warning: METHOD is S2S but CJEVENT and/or SIGNATURE parameters are missing'
+                        test.push({methodError: 'METHOD is S2S but CJEVENT and/or SIGNATURE parameters are missing'})
                     }
                 }
         }
@@ -89,14 +95,16 @@ function magic(queryString){
         if("SIGNATURE" in pixelDict){
             itemList = itemList + '<span class="params">SIGNATURE</span>: ' + pixelDict["SIGNATURE"]+'<br/>';
                 if(!pixelDict["SIGNATURE"]){
-                    warnings += '<br/>Warning: SIGNATURE value is not defined'
+                   // warnings += '<br/>Warning: SIGNATURE value is not defined'
+                    test.push({SIGNATURE_Error: 'SIGNATURE value is not defined'});
                 }
         }
 
         if("CJEVENT" in pixelDict){
             itemList = itemList + '<span class="params">CJEVENT</span>: ' + pixelDict["CJEVENT"]+'<br/>';
                 if(!pixelDict["CJEVENT"]){
-                    warnings += '<br/>Warning: CJEVENT value is not defined'
+                    //warnings += '<br/>Warning: CJEVENT value is not defined'
+                    test.push({CJEVENT_Error: 'CJEVENT value is not defined'});
                 }
         }
 
@@ -107,7 +115,8 @@ function magic(queryString){
         }
 
         if(!("CHANNEL" in pixelDict)) {
-            warnings += '<br/>Warning: CHANNEL is missing';
+            //warnings += '<br/>Warning: CHANNEL is missing';
+            test.push({channelMissing: 'CHANNEL is missing'});
         }
         else if(!(pixelDict["CHANNEL"].toLowerCase() === "cj" ||
             pixelDict["CHANNEL"].toLowerCase() === "direct" ||
@@ -118,13 +127,16 @@ function magic(queryString){
             pixelDict["CHANNEL"].toLowerCase() === "email" ||
             pixelDict["CHANNEL"].toLowerCase() === "other") &&
                 ("CHANNEL" in pixelDict)) {
-                    warnings += '<br/>Warning: CHANNEL parameter included with unrecognized value'
+                    test.push({channel_TS__badValue: 'CHANNEL parameter included with unrecognized value'});
+                    //warnings += '<br/>Warning: CHANNEL parameter included with unrecognized value'
                 }
         if(!("CHANNEL_TS" in pixelDict)) {
-            warnings += '<br/>Warning: CHANNEL_TS is missing';
+            //warnings += '<br/>Warning: CHANNEL_TS is missing';
+            test.push({channel_TS_Error: 'CHANNEL_TS is missing' });
         }
         else if(!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/.test(pixelDict["CHANNEL_TS"])) {
-            warnings += '<br/>Warning: CHANNEL_TS is not using the proper format'
+           // warnings += '<br/>Warning: CHANNEL_TS is not using the proper format'
+            test.push({CHANNEL_TS_FORMAT_ERROR: 'CHANNEL_TS is not using the proper format'})
         }
 
     }
@@ -138,14 +150,16 @@ function magic(queryString){
             skuGroupCreated=false;
                 if(pixelDict["ITEM"+n] !== undefined){
                     if(tagType === "simple"){
-                        warnings += '<br/>Warning: tag has both AMOUNT and ITEM params';
-                        warnings += '<br/>The subtotal will not be calculated for this reason.';
+                       // warnings += '<br/>Warning: tag has both AMOUNT and ITEM params';
+                       // warnings += '<br/>The subtotal will not be calculated for this reason.';
+                        test.push({tooManyParams: "tag has both AMOUNT and ITEM params. The subtotal will not be calculated for this reason. "});
                         badSubtotal = true;
                     }
 
                     itemBadChars = pixelDict["ITEM"+n].match(/[^0-9A-Z\-_]/gi);
                         if(itemBadChars !== null){
-                            warnings += '<br/>Warning: Illegal characters found in ITEM'+n+': ' + itemBadChars;
+                            test.push({itemError:'<br/>Warning: Illegal characters found in ITEM'+n+': ' + itemBadChars})
+                            //warnings += '<br/>Warning: Illegal characters found in ITEM'+n+': ' + itemBadChars;
                         }
                         if(!skuGroupCreated){
                             itemList = itemList + '<br/>'+ '<span class="params_head">SKU GROUP NUMBER: '+n +'</span><br/>'+ '<span class="params">ITEM'+'</span>: ' + pixelDict["ITEM"+n]+'<br/>';
@@ -162,7 +176,12 @@ function magic(queryString){
                     tempamt = Math.round( parseFloat(pixelDict["AMT"+n]) * 100) / 100;
                     amtBadChars = pixelDict["AMT"+n].match(/[^0-9\.]/g);
                         if(amtBadChars !== null){
-                            warnings += '<br/>Warning: Illegal characters found in AMT'+n+': ' + amtBadChars;
+                            //test['amtError'] = '<br/>Warning: Illegal characters found in AMT'+n+': ' + amtBadChars;
+                            //console.log(warnings);
+                            //warnings.push({'amtError':'<br/>Warning: Illegal characters found in AMT'+n+': ' + amtBadChars})
+                            //warnings += '<br/>Warning: Illegal characters found in AMT'+n+': ' + amtBadChars;
+                            test.push({AmountError: 'Illegal characters found in AMT'+n+': ' + amtBadChars});
+                            // console.log(errors);
                             badSubtotal = true;
                         }
 
@@ -181,7 +200,9 @@ function magic(queryString){
                     qtyBadChars = pixelDict["QTY"+n].match(/[^0-9]/g);
 
                     if(qtyBadChars !== null){
-                        warnings += '<br/>Warning: Illegal characters found in QTY'+n+': ' + qtyBadChars;
+                        test.push({illegalCharQTY:'Illegal characters found in QTY'+n+': ' + qtyBadChars})
+
+                        //warnings += '<br/>Warning: Illegal characters found in QTY'+n+': ' + qtyBadChars;
                         badSubtotal = true;
                     }
                     tempqty = Math.round( parseFloat(pixelDict["QTY"+n]) * 100) / 100;
@@ -201,7 +222,10 @@ function magic(queryString){
         }
 
         if(badSubtotal === true){
-            warnings += '<br>Warning: Fields used in the order subtotal generated errors. The subtotal may be incorrect.';
+            //test['subTotalError'] = 'Fields used in the order subtotal generated errors. The subtotal may be incorrect.';
+            test.push({subTotalError:'Fields used in the order subtotal generated errors. The subtotal may be incorrect.'})
+            // errors.push(test);
+            //warnings += '<br>Warning: Fields used in the order subtotal generated errors. The subtotal may be incorrect.';
         }
             warnings += "<br/><br/></div><br/><br/>";
                 if(warnings === "<div class='warnings'><br/><br/></div><br/><br/>"){
@@ -230,6 +254,8 @@ function magic(queryString){
     //   $('#queryString > td.cie1').html(realName + ':<br>' + today);
     //   s1="0";
     // }
-    console.log(warnings);
+    //console.log(warnings);
+    //errors.push(warnings);
+    return test;
 }
-magic('QTY1=1&CID=1532457&AMT1=2**2.40&TYPE=404664&ITEM1=0025359068&CURRENCY=USD&OID=6141768135&COUPON=AUGUST30&METHOD=IMG');
+console.log(magic('QTY1=*1&CID=1532457&AMT1=2**2.40&TYPE=4#4664&ITEM1=002#5359068&CURRENCY=USD&OID=614176813#5&COUPON=AUGUST30&METHOD=I!MG'));
